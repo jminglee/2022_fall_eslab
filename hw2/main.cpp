@@ -79,9 +79,10 @@ public:
         }
 
         SocketAddress address;
-        const char addr[] = "192.168.43.68";
+        const char *hostname = "192.168.108.35";
+        _net->gethostbyname(hostname, &address);
+
         const uint16_t port = 8080;
-        address.set_ip_address(addr);
         address.set_port(port);
 
         result = _socket.connect(address);
@@ -103,24 +104,22 @@ public:
         BSP_ACCELERO_Init();
         BSP_GYRO_Init();
 
-        while(sample_num < 5)
+        while(sample_num < 30)
         {
             ++sample_num;
             BSP_GYRO_GetXYZ(pGyroDataXYZ);
             BSP_ACCELERO_AccGetXYZ(pDataXYZ);
             
-            int len = sprintf(acc_json, "{\"Gyro\":{\"x\":%f,\"y\":%f,\"z\":%f},\
-                                          \"Acce\":{\"x\":%f,\"y\":%f,\"z\":%f},\
-                                          \"s\":%d}",
-                            (float)((int)(pGyroDataXYZ[0]*10000))/10000,
-                            (float)((int)(pGyroDataXYZ[1]*10000))/10000, 
-                            (float)((int)(pGyroDataXYZ[2]*10000))/10000, 
-                            (float)((int)(pDataXYZ[0]*10000))/10000,
-                            (float)((int)(pDataXYZ[1]*10000))/10000, 
-                            (float)((int)(pDataXYZ[2]*10000))/10000,
-                            sample_num);
+            len = sprintf(acc_json, "%f %f %f %f %f %f %d",
+                        (float)((int)(pGyroDataXYZ[0]*10000))/10000,
+                        (float)((int)(pGyroDataXYZ[1]*10000))/10000, 
+                        (float)((int)(pGyroDataXYZ[2]*10000))/10000, 
+                        (float)((int)(pDataXYZ[0]*10000))/10000,
+                        (float)((int)(pDataXYZ[1]*10000))/10000, 
+                        (float)((int)(pDataXYZ[2]*10000))/10000,
+                        sample_num);
 
-            printf("%s",acc_json);
+            printf("%s\n",acc_json);
 
             response = _socket.send(acc_json,len);
             if(response <= 0)
