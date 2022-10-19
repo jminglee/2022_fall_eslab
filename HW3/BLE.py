@@ -1,9 +1,17 @@
 from bluepy.btle import Peripheral, UUID
 from bluepy.btle import Scanner
+import bluepy.btle as btle
 
 scanner = Scanner()
 print("Scanning for 3 seconds: ")
 devices = list(scanner.scan(3.0))
+
+class MyDelegate(btle.DefaultDelegate):
+    def __init__(self):
+        btle.DefaultDelegate.__init__(self)
+
+    def handleNotification(self, cHandle, data):
+        print("A notification was received")
 
 for i, device in enumerate(devices):
     print(f"{i}: {device.addr} {device.addrType} {device.rssi}")
@@ -12,23 +20,20 @@ for i, device in enumerate(devices):
             print(f"{desc} = {value}")
 
 num = int(input('Enter your device number: '))
-print(f'Connecting to device {num}: {devices[num].addr}')
+print(f"Connecting to device {num}: {devices[num].addr}")
 dev = Peripheral(devices[num].addr, devices[num].addrType)
+dev.withDelegate(MyDelegate())
 
-for service in dev.services:
-    print(str(service))
-    
 try:
-    testService= dev.getServiceByUUID(UUID(0xfff0))
-    for ch in testService.getCharacteristics():
-        print("ch: " + str(ch))
-
-    ch= dev.getCharacteristics(uuid=UUID(0xfff4))[0]
-    if (ch.supportsRead()):
-        print("Data in channel:", ch.read())
-    if input("Write? [Y/N]: " == "Y"):
-        write_data = input("To Write: ")
-        ch.write(write_data.encode('utf-8'))
-
+    ch = dev.getCharacteristics(uuid=UUID(0xfff4))[0]
+    write_data = input("Test of writing data: ")
+    ch.write(write_data.encode('utf-8'), withResponse=True)
+    cccd = ch.getHandle() + 1
+    dev.writeCharacteristic(cccd, b"\x01\x00")
+    print("Test of receiving notify....")
+    while True:
+        if dev.waitForNotifications(5.0):
+            print("Get notified!")
+            break
 finally:
     dev.disconnect()
