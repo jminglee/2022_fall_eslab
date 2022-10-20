@@ -1,7 +1,8 @@
 # HW-3 BLE programming - Python/C/C++ BLE central 
 ## Usage
+- Complete all the preliminary setting of Raspberry Pi device.
 - Open the BLE Tool app, and start advertising.
-- Run the command ```sudo python BLE.py``` on your Raspberry Pi device.
+- Run the command ```sudo python BLE.py``` on your rpi device.
 - Find your device number of the device you want to connect with in the list and enter it.
 - Enter the data you would like to write, and check the log to confirm the wrtie request has made.
 - Use your cellphone to notify the rpi device.
