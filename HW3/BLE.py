@@ -6,13 +6,6 @@ scanner = Scanner()
 print("Scanning for 3 seconds: ")
 devices = list(scanner.scan(3.0))
 
-class MyDelegate(btle.DefaultDelegate):
-    def __init__(self):
-        btle.DefaultDelegate.__init__(self)
-
-    def handleNotification(self, cHandle, data):
-        print("A notification was received")
-
 for i, device in enumerate(devices):
     print(f"{i}: {device.addr} {device.addrType} {device.rssi}")
     for (adtype, desc, value) in device.getScanData():
@@ -22,7 +15,6 @@ for i, device in enumerate(devices):
 num = int(input('Enter your device number: '))
 print(f"Connecting to device {num}: {devices[num].addr}")
 dev = Peripheral(devices[num].addr, devices[num].addrType)
-dev.withDelegate(MyDelegate())
 
 try:
     ch = dev.getCharacteristics(uuid=UUID(0xfff4))[0]
