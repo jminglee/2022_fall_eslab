@@ -8,5 +8,5 @@ STM32 IoT part:
 Python part:
 - Copy the recorded data in the last step of STM32 IoT part in ```Data.py```
 - Run ```fir.py``` to plot the result
-- ![The example plot may look like:](/assets/images/Sample.png) 
+- ![The example plot may look like:](Sample.png) 
 
