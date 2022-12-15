@@ -1,8 +1,7 @@
 import pygame
 import random
 
-pygame.init()
-pygame.font.init()
+
 
 SCREEN_W   = 800
 SCREEN_H   = 600
@@ -20,9 +19,10 @@ GREEN      = [0,255,0]
 ORANGE     = [255,165,0]
 BACKGROUND = [220,220,220]
 
-screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
-pygame.display.set_caption('Tanks Battle')
-clock = pygame.time.Clock()
+FPS = 30
+PLAYER_SPEED = 3
+ENEMY_SPEED  = 1
+BULLET_SPEED = 5
 
 class Level():
     def __init__(self, init_level=0):
@@ -71,15 +71,15 @@ class Player(pygame.sprite.Sprite):
         self.image.fill(GREEN)
         self.image.set_alpha(255*self.life/self.max_life) 
         self.rect = self.image.get_rect(center=(50,50))
-        self.speed = 3
+        self.speed = PLAYER_SPEED
         self.direction = None
 
-    def update(self, pressed_keys, blocks):
+    def update(self, events, blocks):
         enable = True
-        if pressed_keys[pygame.K_UP]: self.direction = UP
-        elif pressed_keys[pygame.K_DOWN]: self.direction = DOWN
-        elif pressed_keys[pygame.K_LEFT]: self.direction = LEFT
-        elif pressed_keys[pygame.K_RIGHT]: self.direction = RIGHT
+        if events[3].is_set(): self.direction = UP
+        elif events[4].is_set(): self.direction = DOWN
+        elif events[1].is_set(): self.direction = LEFT
+        elif events[2].is_set(): self.direction = RIGHT
 
         if self.direction == UP:
             for block in blocks:
@@ -128,7 +128,7 @@ class Enemy(pygame.sprite.Sprite):
         self.image.fill(RED)
         self.image.set_alpha(255*self.life/self.max_life) 
         self.rect = self.image.get_rect(center=(pos[0],pos[1]))
-        self.speed = 1
+        self.speed = ENEMY_SPEED
         self.direction = RIGHT
         self.bullet_counter = 1
 
@@ -238,7 +238,7 @@ class Bullet(pygame.sprite.Sprite):
         self.image.fill(ORANGE)
         self.rect = self.image.get_rect(center=(pos[0],pos[1]))
         self.direction = direction
-        self.speed = 5
+        self.speed = BULLET_SPEED
 
     def update(self):
         if self.direction == LEFT:  self.rect.move_ip(-self.speed,0)
@@ -251,7 +251,12 @@ class Bullet(pygame.sprite.Sprite):
         if self.rect.top <= SCREEN_TOP:  self.kill()
         if self.rect.bottom >= SCREEN_H: self.kill()
 
-def main():
+def game(events):
+    pygame.init()
+    pygame.font.init()
+    screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
+    pygame.display.set_caption('Tanks Battle')
+    clock = pygame.time.Clock()
     next_level = True
     starting   = True
     running    = True
@@ -280,18 +285,10 @@ def main():
 
     while starting:
         for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    starting = False
-                    running = False
-                    ending = False
-            elif event.type == pygame.QUIT:
-                starting = False
-                running = False
-                ending = False
+            if event.type == pygame.QUIT:
+                exit()
 
-        pressed_keys = pygame.key.get_pressed() 
-        if pressed_keys[pygame.K_SPACE]:
+        if events[5].is_set():
             starting = False 
 
         text = big_font.render(f'Tank Battle', False, (0, 0, 0))
@@ -301,9 +298,13 @@ def main():
         screen.blit(text, ((SCREEN_W-text.get_width())/2, (SCREEN_H-text.get_height())/2)) 
         screen.blit(text2, ((SCREEN_W-text2.get_width())/2, (SCREEN_H-text2.get_height())/2+100)) 
         pygame.display.flip()
-        clock.tick(30)
+        clock.tick(FPS)
 
     while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                exit()
+
         if next_level:
             blocks.empty()
             player_bullets.empty()
@@ -322,19 +323,9 @@ def main():
                 all_item.add(new_block)
             next_level = False
 
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    running = False
-                    ending = False
-            elif event.type == pygame.QUIT:
-                running = False   
-                ending = False
-
         screen.fill(WHITE)
 
-        pressed_keys = pygame.key.get_pressed() 
-        if pressed_keys[pygame.K_SPACE] and bullet_counter == 0:
+        if events[5].is_set() and bullet_counter == 0:
             new_bullets = Bullet([player.rect.centerx,player.rect.centery], player.direction)
             player_bullets.add(new_bullets)
             all_item.add(new_bullets)
@@ -348,7 +339,7 @@ def main():
             collide_counter += 1
             collide_counter %= 30
 
-        player.update(pressed_keys,blocks)
+        player.update(events,blocks)
 
         for enemy in enemies:
             enemy.update(player,blocks)
@@ -408,18 +399,14 @@ def main():
         screen.blit(text, (50,0))   
         pygame.draw.line(screen, BLACK, (0,SCREEN_TOP-2), (SCREEN_W, SCREEN_TOP-2), 5)
         pygame.display.flip()
-        clock.tick(30)
+        clock.tick(FPS)
 
     while ending:
         for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    ending = False
-            elif event.type == pygame.QUIT:
-                ending = False
+            if event.type == pygame.QUIT:
+                exit()
 
-        pressed_keys = pygame.key.get_pressed() 
-        if pressed_keys[pygame.K_SPACE]:
+        if events[5].is_set():
             ending = False
 
         text = big_font.render(f'Game Over', False, (0, 0, 0))
@@ -429,7 +416,4 @@ def main():
         screen.blit(text, ((SCREEN_W-text.get_width())/2, (SCREEN_H-text.get_height())/2)) 
         screen.blit(text2, ((SCREEN_W-text2.get_width())/2, (SCREEN_H-text2.get_height())/2+100)) 
         pygame.display.flip()
-        clock.tick(30)
-
-if __name__=='__main__':
-    main()
+        clock.tick(FPS)
