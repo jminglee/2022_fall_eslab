@@ -1,8 +1,6 @@
 import pygame
 import random
 
-
-
 SCREEN_W   = 800
 SCREEN_H   = 600
 SCREEN_TOP = 40
@@ -325,7 +323,7 @@ def game(events):
 
         screen.fill(WHITE)
 
-        if events[5].is_set() and bullet_counter == 0:
+        if events[5].is_set() and bullet_counter == 0 and player.direction != None:
             new_bullets = Bullet([player.rect.centerx,player.rect.centery], player.direction)
             player_bullets.add(new_bullets)
             all_item.add(new_bullets)
