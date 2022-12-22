@@ -18,9 +18,9 @@ ORANGE     = [255,165,0]
 BACKGROUND = [220,220,220]
 
 FPS = 30
-PLAYER_SPEED = 3
-ENEMY_SPEED  = 1
-BULLET_SPEED = 5
+PLAYER_SPEED = 90.0/FPS
+ENEMY_SPEED  = 30.0/FPS
+BULLET_SPEED = 150.0/FPS
 
 class Level():
     def __init__(self, init_level=0):
@@ -34,7 +34,7 @@ class Level():
         self.pos_enemy = list()
         while len(self.pos_enemy) < self.num_enemy:
             pos = (20*(random.randint(0, SCREEN_W-20)//20)+10, 20*(random.randint(40, SCREEN_H-20)//20)+10)
-            while pos in self.pos_enemy or (abs(pos[0]-player.rect.centerx)<20 and abs(pos[1]-player.rect.centery)<20):
+            while pos in self.pos_enemy or (abs(pos[0]-player.rect.centerx)<100 and abs(pos[1]-player.rect.centery)<100):
                 pos = (20*(random.randint(0, SCREEN_W-20)//20)+10, 20*(random.randint(40, SCREEN_H-20)//20)+10)
             self.pos_enemy.append(pos)
 
