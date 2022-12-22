@@ -1,5 +1,4 @@
 #include "mbed.h"
-//#include "NetworkInterface.h"
 #include "wifi_helper.h"
 #include "mbed-trace/mbed_trace.h"
 #include "EthernetInterface.h" 
@@ -22,13 +21,15 @@
 #define SAMPLE_RATE 2
 #define PLAYER      1
 #define SAMPLE_PERIOD 2ms
-#define Rotation_threshold 1
+#define Rotation_threshold 1.0
 
 InterruptIn button(BUTTON1);
 
-uint8_t shot = 0;
-uint8_t last_operation = 0;
-uint8_t operation = 0;
+double score = 0;
+uint8_t counter_act = 0;
+volatile uint8_t shot = 0;
+volatile uint8_t last_operation = 0;
+volatile uint8_t operation = 0;
 class Sensor{
 #define TimeStep  (float)SAMPLE_RATE / 1000
 public:
@@ -38,30 +39,36 @@ public:
         BSP_GYRO_Init();
         Calibrate();
         _event_queue.call_every(2ms, this, &Sensor::update);
-        _event_queue.call_every(3ms, this, &Sensor::getAction);
     }
     void Calibrate(){
         printf("Calibrating Sensors.....\n");
         int n = 0;
-        for(int i = 0; i < 3; ++i){
-            _AccOffset[i] = 0;
-            _GyroOffset[i] = 0;
-        }
+        _AccOffset[0] = 0;
+        _GyroOffset[0] = 0;
+        _AccOffset[1] = 0;
+        _GyroOffset[1] = 0;
+        _AccOffset[2] = 0;
+        _GyroOffset[2] = 0;
         while(n < 2000){
             BSP_ACCELERO_AccGetXYZ(_pAccDataXYZ);
             BSP_GYRO_GetXYZ(_pGyroDataXYZ);
-            for(int i = 0; i < 3; ++i){
-                _AccOffset[i] += _pAccDataXYZ[i];
-                _GyroOffset[i] += _pGyroDataXYZ[i];
-            }
+            _AccOffset[0] += _pAccDataXYZ[0];
+            _GyroOffset[0] += _pGyroDataXYZ[0];
+            _AccOffset[1] += _pAccDataXYZ[1];
+            _GyroOffset[1] += _pGyroDataXYZ[1];
+            _AccOffset[2] += _pAccDataXYZ[2];
+            _GyroOffset[2] += _pGyroDataXYZ[2];
             ThisThread::sleep_for(SAMPLE_PERIOD);
             ++n;
         }
-        for(int i = 0; i < 3; ++i){
-            _AccOffset[i] /= n;
-            _GyroOffset[i] /= n;
-        }
         
+        // loop unrolling
+        _AccOffset[0] /= n;
+        _GyroOffset[0] /= n;
+        _AccOffset[1] /= n;
+        _GyroOffset[1] /= n;
+        _AccOffset[2] /= n;
+        _GyroOffset[2] /= n;
         printf("Done calibration\n");
         
     }
@@ -75,53 +82,46 @@ public:
 
     void check_left_right(uint8_t& right, uint8_t& left) {
         BSP_ACCELERO_AccGetXYZ(_pAccDataXYZ);
-        if((_pAccDataXYZ[0] - _AccOffset[0])*SCALE_MULTIPLIER > 0.8 || rotation_right_left > Rotation_threshold)
+        if((_pAccDataXYZ[0] - _AccOffset[0])*SCALE_MULTIPLIER > 0.7){
             left = 1;
+            score = (_pAccDataXYZ[0] - _AccOffset[0])*SCALE_MULTIPLIER;
+        }
         else
             left = 0;
-        if((_pAccDataXYZ[0] - _AccOffset[0])*SCALE_MULTIPLIER < -0.8 || rotation_right_left < -Rotation_threshold)
+        if((_pAccDataXYZ[0] - _AccOffset[0])*SCALE_MULTIPLIER < -0.7){
             right = 1;
+            score = (_pAccDataXYZ[0] - _AccOffset[0])*SCALE_MULTIPLIER;
+        }
         else
             right = 0;
         rotation_right_left = 0;
     }
     
     void check_up_down(uint8_t& up, uint8_t& down) {
-        if(rotation_distance > Rotation_threshold)
+        if(rotation_distance > Rotation_threshold || (_pAccDataXYZ[2] - _AccOffset[2])*SCALE_MULTIPLIER > 0.6){
             up = 1;
+            score = rotation_distance;
+        }
+
         else{
             up = 0;
         }
-        if(rotation_distance < -Rotation_threshold)
+        if(rotation_distance < -Rotation_threshold-0.05 || (_pAccDataXYZ[2] - _AccOffset[2])*SCALE_MULTIPLIER < -0.6){
             down = 1;
+            score = rotation_distance;
+        }
+            
         else
             down = 0;
         rotation_distance = 0;
     }
     
-    void Action(uint8_t& right, uint8_t& left, uint8_t& up, uint8_t& down, uint8_t& shot){
+    void Action(uint8_t& right, uint8_t& left, uint8_t& up, uint8_t& down, volatile uint8_t& shot){
         check_left_right(right, left);
         check_up_down(up, down);
     }
     void getAction(){
         Action(right, left, up, down, shot);
-        if(right+left+up+down+shot==1){
-            if(right==1){
-                printf("right\n");
-            }
-            else if(left==1){
-                printf("left\n");
-            }
-            else if(up==1){
-                printf("up\n");
-            }
-            else if(down==1){
-                printf("down\n");
-            }
-            else{
-                printf("shoot!\n");
-            }
-        }
     }
 private:
     events::EventQueue &_event_queue;
@@ -176,7 +176,7 @@ public:
         }
         
         SocketAddress address;
-        const char *hostname = "192.168.0.115";
+        const char *hostname = "192.168.43.233";
         _net->gethostbyname(hostname, &address);
 
         const uint16_t port = REMOTE_PORT;
@@ -192,7 +192,7 @@ public:
         {
             printf("Socket connect to %s : %d\r\n", address.get_ip_address(), REMOTE_PORT);
         }
-        _event_queue.call_every(5ms, this, &SocketDemo::send_data);
+        _event_queue.call_every(10ms, this, &SocketDemo::send_data);
     }
 
     ~SocketDemo()
@@ -202,7 +202,7 @@ public:
     }
 
     void send_data(){
-        char data[64];
+        char data[3];
         nsapi_error_t response;
         _sensor->getAction();
         if(shot==1){
@@ -220,13 +220,13 @@ public:
         else if(_sensor->down==1){
             operation = 4;
         }
-        
+        uint8_t table[6] = {0, 2, 1, 4, 3, 5};
         if(operation!=last_operation){
             int len = sprintf(data,"%d\n", operation);
-        
             response = _socket.send(data,len);
             if(response <= 0)
                 printf("Error sending:%d\n",response);
+            
             last_operation = operation;
         }
 
