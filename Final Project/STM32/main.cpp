@@ -25,8 +25,11 @@
 
 InterruptIn button(BUTTON1);
 
+double acc = 0;
 double score = 0;
+uint8_t counter = 0;
 uint8_t counter_act = 0;
+//uint8_t counter_continue = 0;
 volatile uint8_t shot = 0;
 volatile uint8_t last_operation = 0;
 volatile uint8_t operation = 0;
@@ -85,12 +88,14 @@ public:
         if((_pAccDataXYZ[0] - _AccOffset[0])*SCALE_MULTIPLIER > 0.7){
             left = 1;
             score = (_pAccDataXYZ[0] - _AccOffset[0])*SCALE_MULTIPLIER;
+            acc = _pAccDataXYZ[0] - _AccOffset[0];
         }
         else
             left = 0;
         if((_pAccDataXYZ[0] - _AccOffset[0])*SCALE_MULTIPLIER < -0.7){
             right = 1;
             score = (_pAccDataXYZ[0] - _AccOffset[0])*SCALE_MULTIPLIER;
+            acc = _pAccDataXYZ[0] - _AccOffset[0];
         }
         else
             right = 0;
@@ -106,7 +111,7 @@ public:
         else{
             up = 0;
         }
-        if(rotation_distance < -Rotation_threshold-0.05 || (_pAccDataXYZ[2] - _AccOffset[2])*SCALE_MULTIPLIER < -0.6){
+        if(rotation_distance < -Rotation_threshold-0.05 || (_pAccDataXYZ[2] - _AccOffset[2])*SCALE_MULTIPLIER < -0.7){
             down = 1;
             score = rotation_distance;
         }
@@ -202,7 +207,7 @@ public:
     }
 
     void send_data(){
-        char data[3];
+        char data[64];
         nsapi_error_t response;
         _sensor->getAction();
         if(shot==1){
@@ -220,14 +225,32 @@ public:
         else if(_sensor->down==1){
             operation = 4;
         }
-        uint8_t table[6] = {0, 2, 1, 4, 3, 5};
+        //uint8_t table[6] = {0, 2, 1, 4, 3, 0};
+        /*
+        if(operation==last_operation){
+            counter_continue++;
+        }
+        */
         if(operation!=last_operation){
+            /*
+            if(operation==table[last_operation] && counter_continue>=10){
+                int len = sprintf(data,"%d\n", operation);
+                response = _socket.send(data,len);
+                if(response <= 0)
+                    printf("Error sending:%d\n",response);
+            
+                last_operation = operation; 
+                return;
+            }
+            */
+            
             int len = sprintf(data,"%d\n", operation);
             response = _socket.send(data,len);
             if(response <= 0)
                 printf("Error sending:%d\n",response);
             
             last_operation = operation;
+            
         }
 
     }
